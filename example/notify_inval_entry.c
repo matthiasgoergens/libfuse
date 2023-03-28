@@ -147,6 +147,7 @@ static void tfs_lookup(fuse_req_t req, fuse_ino_t parent,
     else if (strcmp(name, file_name) == 0) {
         e.ino = file_ino;
         lookup_cnt++;
+        fuse_log(FUSE_LOG_DEBUG, "tfs_lookup: lookup_cnt %i ++\n", lookup_cnt);
     } else
         goto err_out;
 
@@ -164,8 +165,10 @@ err_out:
 static void tfs_forget (fuse_req_t req, fuse_ino_t ino,
                         uint64_t nlookup) {
     (void) req;
-    if(ino == file_ino)
+    if(ino == file_ino) {
         lookup_cnt -= nlookup;
+        fuse_log(FUSE_LOG_DEBUG, "tfs_forget: lookup_cnt %i %i\n", lookup_cnt, nlookup);
+    }
     else
         assert(ino == FUSE_ROOT_ID);
     fuse_reply_none(req);
@@ -256,13 +259,25 @@ static void* update_fs_loop(void *data) {
     while(1) {
         old_name = strdup(file_name);
         update_fs();
+        fuse_log(FUSE_LOG_DEBUG, "Update_fs_loop %s %s\n", old_name, file_name);
+        fuse_log(FUSE_LOG_DEBUG, "lookup_cnt %i\n", lookup_cnt);
+        
         if (!options.no_notify && lookup_cnt) {
+        // if (!options.no_notify) {
             if(options.only_expire) {
-                assert(fuse_lowlevel_notify_expire_entry
-                   (se, FUSE_ROOT_ID, old_name, strlen(old_name), FUSE_LL_EXPIRE_ONLY) == 0);
+                int x = fuse_lowlevel_notify_expire_entry
+                   (se, FUSE_ROOT_ID, old_name, strlen(old_name), FUSE_LL_EXPIRE_ONLY);
+                fuse_log(FUSE_LOG_DEBUG, "y fuse_lowlevel_notify_expire_entry: %i\n", x);
+                // assert(x == 0 || x == -ENOENT);
+                assert(x == 0);
+                // lookup_cnt = 0;
+                fuse_log(FUSE_LOG_DEBUG, "fuse_lowlevel_notify_expire_entry worked xx\n");
             } else {
-                assert(fuse_lowlevel_notify_inval_entry
-                      (se, FUSE_ROOT_ID, old_name, strlen(old_name)) == 0);
+                fuse_log(FUSE_LOG_DEBUG, "fuse_lowlevel_notify_inval_entry\n");
+                int x = fuse_lowlevel_notify_inval_entry
+                      (se, FUSE_ROOT_ID, old_name, strlen(old_name));
+                fuse_log(FUSE_LOG_DEBUG, "! fuse_lowlevel_notify_expire_entry: %i\n", x);
+                assert(x == 0);
             }
         }
         free(old_name);

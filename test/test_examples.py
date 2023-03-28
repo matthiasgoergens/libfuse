@@ -331,8 +331,8 @@ def test_null(tmpdir, output_checker):
         umount(mount_process, mnt_file)
 
 
-@pytest.mark.skipif(fuse_proto < (7,12),
-                    reason='not supported by running kernel')
+# @pytest.mark.skipif(fuse_proto < (7,12),
+#                     reason='not supported by running kernel')
 @pytest.mark.parametrize("only_expire", ("invalidate_entries", "expire_entries"))
 @pytest.mark.parametrize("notify", (True, False))
 def test_notify_inval_entry(tmpdir, only_expire, notify, output_checker):
@@ -345,8 +345,9 @@ def test_notify_inval_entry(tmpdir, only_expire, notify, output_checker):
         cmdline.append('--no-notify')
     if only_expire == "expire_entries":
         cmdline.append('--only-expire')
-    mount_process = subprocess.Popen(cmdline, stdout=output_checker.fd,
-                                     stderr=output_checker.fd)
+    print(cmdline)
+    mount_process = subprocess.Popen(cmdline, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE)
     try:
         wait_for_mount(mount_process, mnt_dir)
         fname = pjoin(mnt_dir, os.listdir(mnt_dir)[0])
@@ -364,7 +365,9 @@ def test_notify_inval_entry(tmpdir, only_expire, notify, output_checker):
             safe_sleep(5)
         with pytest.raises(FileNotFoundError):
             os.stat(fname)
-    except:
+    except Exception as e:
+        print(e)
+        raise
         cleanup(mount_process, mnt_dir)
         raise
     else:

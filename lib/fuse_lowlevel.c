@@ -172,7 +172,7 @@ static int fuse_send_msg(struct fuse_session *se, struct fuse_chan *ch,
 	out->len = iov_length(iov, count);
 	if (se->debug) {
 		if (out->unique == 0) {
-			fuse_log(FUSE_LOG_DEBUG, "NOTIFY: code=%d length=%u\n",
+			fuse_log(FUSE_LOG_DEBUG, "NOTIFYx: code=%d length=%u\n",
 				out->error, out->len);
 		} else if (out->error) {
 			fuse_log(FUSE_LOG_DEBUG,
@@ -187,13 +187,16 @@ static int fuse_send_msg(struct fuse_session *se, struct fuse_chan *ch,
 	}
 
 	ssize_t res;
-	if (se->io != NULL)
+	if (se->io != NULL) {
 		/* se->io->writev is never NULL if se->io is not NULL as
 		specified by fuse_session_custom_io()*/
+		fuse_log(FUSE_LOG_DEBUG, "fuse_send_msg se->io != NULL %i\n");
 		res = se->io->writev(ch ? ch->fd : se->fd, iov, count,
 					   se->userdata);
-	else
+	} else {
+		fuse_log(FUSE_LOG_DEBUG, "fuse_send_msg se->io == NULL %i\n");
 		res = writev(ch ? ch->fd : se->fd, iov, count);
+	}
 
 	int err = errno;
 
@@ -201,6 +204,7 @@ static int fuse_send_msg(struct fuse_session *se, struct fuse_chan *ch,
 		/* ENOENT means the operation was interrupted */
 		if (!fuse_session_exited(se) && err != ENOENT)
 			perror("fuse: writing device");
+		fuse_log(FUSE_LOG_DEBUG, "fuse_send_msg failed %i\n", err);
 		return -err;
 	}
 
