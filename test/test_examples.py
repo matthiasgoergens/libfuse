@@ -58,7 +58,7 @@ def invoke_mount_fuse_drop_privileges(mnt_dir, name, options):
     if os.getuid() != 0:
         pytest.skip('drop_privileges requires root, skipping.')
 
-    return invoke_mount_fuse(mnt_dir, name, options + ('drop_privileges',))
+    return invoke_mount_fuse(mnt_dir, pjoin('example', name), options + ('drop_privileges',))
 
 class raii_tmpdir:
     def __init__(self):
