@@ -20,9 +20,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <paths.h>
-#if !defined( __NetBSD__) && !defined(__FreeBSD__) && !defined(__DragonFly__)
-#include <mntent.h>
-#else
+#if !defined( _PATH_MOUNTED)
 #define IGNORE_MTAB
 #endif
 #include <sys/stat.h>
