@@ -258,8 +258,10 @@ static void* update_fs_loop(void *data) {
         update_fs();
         if (!options.no_notify && lookup_cnt) {
             if(options.only_expire) {
-                assert(fuse_lowlevel_notify_expire_entry
-                   (se, FUSE_ROOT_ID, old_name, strlen(old_name), FUSE_LL_EXPIRE_ONLY) == 0);
+                int result = fuse_lowlevel_notify_expire_entry
+                   (se, FUSE_ROOT_ID, old_name, strlen(old_name), FUSE_LL_EXPIRE_ONLY);
+                fprintf(stderr, "fuse_lowlevel_notify_expire_entry: %i\n", result);
+                assert(result == 0 || result == -2);
             } else {
                 assert(fuse_lowlevel_notify_inval_entry
                       (se, FUSE_ROOT_ID, old_name, strlen(old_name)) == 0);

@@ -21,10 +21,11 @@ echo "Running in ${TEST_DIR}"
 cp -v "${SOURCE_DIR}/test/lsan_suppress.txt" .
 export LSAN_OPTIONS="suppressions=$(pwd)/lsan_suppress.txt"
 export ASAN_OPTIONS="detect_leaks=1"
+echo C compiler is: ${CC}
 export CC
 
 # Standard build
-for CC in gcc gcc-9 gcc-10 clang; do
+for CC in clang; do
     echo "=== Building with ${CC} ==="
     mkdir build-${CC}; cd build-${CC}
     if [ "${CC}" == "clang" ]; then

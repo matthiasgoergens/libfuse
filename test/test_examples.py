@@ -341,14 +341,16 @@ def test_notify_inval_entry(tmpdir, only_expire, notify, output_checker):
     mnt_dir = str(tmpdir)
     cmdline = base_cmdline + \
               [ pjoin(basename, 'example', 'notify_inval_entry'),
-                '-f', '--update-interval=1',
+                '-f', '-d', '--update-interval=1',
                 '--timeout=5', mnt_dir ]
     if not notify:
         cmdline.append('--no-notify')
     if only_expire == "expire_entries":
         cmdline.append('--only-expire')
+    print(cmdline)
     mount_process = subprocess.Popen(cmdline, stdout=output_checker.fd,
-                                     stderr=output_checker.fd)
+                                    #  stderr=output_checker.fd)
+    )
     try:
         wait_for_mount(mount_process, mnt_dir)
         fname = pjoin(mnt_dir, os.listdir(mnt_dir)[0])

@@ -201,6 +201,7 @@ static int fuse_send_msg(struct fuse_session *se, struct fuse_chan *ch,
 		/* ENOENT means the operation was interrupted */
 		if (!fuse_session_exited(se) && err != ENOENT)
 			perror("fuse: writing device");
+		fprintf(stderr, "fuse_send_msg: ENOENT?: %i\n", err);
 		return -err;
 	}
 
