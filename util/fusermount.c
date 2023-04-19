@@ -1352,7 +1352,7 @@ int main(int argc, char *argv[])
 	static int unmount = 0;
 	static int lazy = 0;
 	static int quiet = 0;
-	char *commfd;
+	char *commfd = NULL;
 	int cfd;
 	const char *opts = "";
 	const char *type = NULL;
@@ -1360,14 +1360,15 @@ int main(int argc, char *argv[])
 
 	static const struct option long_opts[] = {
 		{"unmount", no_argument, NULL, 'u'},
-		// Note: auto-unmount deliberately does not have a short version.
-		// It's meant for internal use by mount.c's setup_auto_unmount.
-		{"auto-unmount", no_argument, NULL, 'U'},
 		{"lazy",    no_argument, NULL, 'z'},
 		{"quiet",   no_argument, NULL, 'q'},
 		{"help",    no_argument, NULL, 'h'},
 		{"version", no_argument, NULL, 'V'},
 		{"options", required_argument, NULL, 'o'},
+		// Note: auto-unmount and comm-fd don't have short versions.
+		// They'ne meant for internal use by mount.c
+		{"auto-unmount", no_argument, NULL, 'U'},
+		{"comm-fd", required_argument, NULL, 'c'},
 		{0, 0, 0, 0}};
 
 	progname = strdup(argc > 0 ? argv[0] : "fusermount");
@@ -1398,6 +1399,9 @@ int main(int argc, char *argv[])
 			unmount = 1;
 			auto_unmount = 1;
 			setup_auto_unmount_only = 1;
+			break;
+		case 'c':
+			commfd = optarg;
 			break;
 		case 'z':
 			lazy = 1;
@@ -1445,7 +1449,8 @@ int main(int argc, char *argv[])
 	if (!setup_auto_unmount_only && unmount)
 		goto do_unmount;
 
-	commfd = getenv(FUSE_COMMFD_ENV);
+	if(commfd == NULL)
+		commfd = getenv(FUSE_COMMFD_ENV);
 	if (commfd == NULL) {
 		fprintf(stderr, "%s: old style mounting not supported\n",
 			progname);
@@ -1453,6 +1458,16 @@ int main(int argc, char *argv[])
 	}
 
 	cfd = atoi(commfd);
+	{
+		struct stat statbuf;
+		fstat(cfd, &statbuf);
+		if(!S_ISSOCK(statbuf.st_mode)) {
+			fprintf(stderr,
+				"%s: file descriptor %i is not a socket, can't send fuse fd\n",
+				progname, cfd);
+			goto err_out;
+		}
+	}
 
 	if (setup_auto_unmount_only)
 		goto wait_for_auto_unmount;
@@ -1462,12 +1477,15 @@ int main(int argc, char *argv[])
 		goto err_out;
 
 	res = send_fd(cfd, fd);
-	if (res == -1)
+	if (res != 0) {
+		umount2(mnt, MNT_DETACH); /* lazy umount */
 		goto err_out;
+	}
 	close(fd);
 
 	if (!auto_unmount) {
 		free(mnt);
+		free((void*) type);
 		return 0;
 	}
 
@@ -1520,10 +1538,12 @@ do_unmount:
 		goto err_out;
 
 success_out:
+	free((void*) type);
 	free(mnt);
 	return 0;
 
 err_out:
+	free((void*) type);
 	free(mnt);
 	exit(1);
 }
